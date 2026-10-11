@@ -71,8 +71,8 @@ if st.button("Generar Rima"):
                         f"El usuario ha escrito la siguiente frase: '{frase_usuario}'.\n"
                         f"Por favor, genera una segunda frase que:\n"
                         f"1. Tenga una longitud similar (aproximadamente {len(palabras)} palabras).\n"
-                        f"2. Tenga rima CONSONANTE en la última palabra con respecto a la última palabra de la frase del usuario (las vocales y consonantes a partir de la última vocal acentuada deben coincidir exactamente).\n"
-                        f"3. Tenga sentido y coherencia lógica con la primera.\n"
+                        f"2. Tenga rima CONSONANTE en la última palabra con respecto a la última palabra de la frase del usuario (las vocales y consonantes a partir de la última vocal acentuada deben coincidir exactamente), y no sea la misma palabra.\n"
+                        f"3. Tenga sentido y coherencia lógica con la primera, si puede ser un chiste, mejor.\n"
                         f"Devuelve únicamente la frase generada de respuesta, sin explicaciones, sin comentarios ni comillas.\n"
                     )
 
