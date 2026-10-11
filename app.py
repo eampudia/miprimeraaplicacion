@@ -1,4 +1,3 @@
-%%writefile app.py
 import streamlit as st
 from google import genai
 import os
@@ -59,8 +58,8 @@ if st.button("Generar Rima"):
                     # 3. Función dinámica para extraer el primer número decimal o entero (versión) del string
                     def extraer_numero_version(nombre):
                         coincidencias = re.findall(r'\d+\.\d+|\d+', nombre)
-                        if coincidencias:
-                            return float(coincidencias[0])
+                        if modificaciones := coincidencias:
+                            return float(modificaciones[0])
                         return float('inf')
 
                     # 4. Ordenar dinámicamente de menor a mayor versión
@@ -70,4 +69,39 @@ if st.button("Generar Rima"):
 
                     # 5. Intentar generar rima iterando sobre los modelos de menor versión a mayor para esquivar los obsoletos (404)
                     prompt = (
-                        f
+                        f"El usuario ha escrito la siguiente frase: '{frase_usuario}'.\n"
+                        f"Por favor, genera una segunda frase que:\n"
+                        f"1. Tenga una longitud similar (aproximadamente {len(palabras)} palabras).\n"
+                        f"2. Tenga rima asonante con la frase del usuario.\n"
+                        f"3. Tenga sentido y coherencia lógica con la primera.\n"
+                        f"Devuelve únicamente la frase generada, sin explicaciones ni comillas.\n"
+                    )
+
+                    respuesta_generada = None
+                    modelo_exitoso = None
+                    
+                    for modelo in modelos_ordenados:
+                        try:
+                            # Probamos el modelo secuencialmente
+                            response = client.models.generate_content(
+                                model=modelo,
+                                contents=prompt,
+                            )
+                            respuesta_generada = response.text.strip()
+                            modelo_exitoso = modelo
+                            break  # Si tiene éxito, salimos del bucle
+                        except Exception as inner_error:
+                            # Ocultar error 404 e intentar con el siguiente modelo de menor versión
+                            st.warning(f"El modelo `{modelo}` no pudo ser utilizado (motivo: {inner_error}). Probando la siguiente opción de menor versión...")
+                            continue
+
+                    if respuesta_generada and modelo_exitoso:
+                        st.success(f"¡Rima generada con éxito usando el modelo activo más económico: `{modelo_exitoso}`!")
+                        st.markdown("### Resultado:")
+                        st.info(f"**Frase original:** {frase_usuario}")
+                        st.success(f"**Frase rimada:** {respuesta_generada}")
+                    else:
+                        st.error("No se pudo generar la rima con ninguno de los modelos 'flash-lite' disponibles en tu cuenta.")
+
+                except Exception as e:
+                    st.error(f"Ocurrió un error en la inicialización: {e}")
