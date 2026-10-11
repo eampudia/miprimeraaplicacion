@@ -4,8 +4,8 @@ import os
 import re
 
 # Configuración de la página
-st.set_page_config(page_title="Generador de Rimas", page_icon="✍️")
-st.title("✍️ Generador de Rimas Asonantes")
+st.set_page_config(page_title="Generador de Rimas", page_icon="✍_")
+st.title("✍_ Generador de Rimas Asonantes")
 st.markdown("Escribe una frase de al menos 4 palabras y la IA seleccionará dinámicamente el modelo más barato y adecuado para generar una segunda frase de longitud similar.")
 
 # Intentar obtener la API Key de varias fuentes seguras en segundo plano
@@ -33,11 +33,11 @@ if st.button("Generar Rima"):
         if len(palabras) < 4:
             st.error(f"Tu frase tiene solo {len(palabras)} palabras. Debe tener al menos 4 palabras.")
         else:
-            with st.spinner("Descargando y evaluando modelos de Gemini..."):
+            with st.spinner("Descargando y evaluando modelos de Gemini de forma 100% dinámica..."):
                 try:
                     client = genai.Client(api_key=google_api_key)
 
-                    # 1. Descargar todos los modelos disponibles
+                    # 1. Descargar todos los modelos disponibles desde la API
                     modelos_disponibles = []
                     for m in client.models.list():
                         if 'gemini' in m.name.lower():
@@ -46,35 +46,30 @@ if st.button("Generar Rima"):
                     if not modelos_disponibles:
                         raise Exception("No se encontraron modelos de Gemini disponibles en esta cuenta.")
 
-                    # 2. Filtrar únicamente los modelos que contienen 'flash' y 'lite'
+                    # 2. Filtrar únicamente por la coincidencia estricta de 'flash' y 'lite'
                     modelos_filtrados = [
                         m for m in modelos_disponibles 
                         if 'flash' in m.lower() and 'lite' in m.lower()
                     ]
 
-                    # Si por alguna razón no hubiera ningún 'flash-lite' disponible, usamos 'flash' como alternativa
                     if not modelos_filtrados:
-                        modelos_filtrados = [m for m in modelos_disponibles if 'flash' in m.lower()]
+                        raise Exception("No se encontraron modelos que coincidan simultáneamente con 'flash' y 'lite' en tu cuenta.")
 
-                    if not modelos_filtrados:
-                        modelos_filtrados = modelos_disponibles
-
-                    # 3. Función para extraer dinámicamente la versión numérica del nombre del modelo
+                    # 3. Función dinámica para extraer el primer número decimal o entero (versión) del string
                     def extraer_numero_version(nombre):
-                        # Busca números decimales (ej. 3.5, 2.5) o enteros (ej. 1, 2)
                         coincidencias = re.findall(r'\d+\.\d+|\d+', nombre)
                         if coincidencias:
                             return float(coincidencias[0])
-                        return float('inf')  # Si no tiene números, lo ubica al final
+                        return float('inf')
 
-                    # 4. Ordenar y seleccionar el modelo con la versión más pequeña
+                    # 4. Ordenar dinámicamente de menor a mayor versión y seleccionar la versión más pequeña
                     modelos_ordenados = sorted(modelos_filtrados, key=extraer_numero_version)
                     modelo_seleccionado = modelos_ordenados[0]
 
-                    st.info(f"Modelos que cumplen con el filtro 'flash' + 'lite': `{modelos_filtrados}`")
-                    st.success(f"Modelo seleccionado dinámicamente (versión más pequeña): `{modelo_seleccionado}`")
+                    st.info(f"Modelos 'flash-lite' detectados: `{modelos_filtrados}`")
+                    st.success(f"Modelo seleccionado de forma dinámica (versión más pequeña): `{modelo_seleccionado}`")
 
-                    # 5. Generar el contenido con el modelo óptimo seleccionado
+                    # 5. Generar el contenido con el modelo autoseleccionado
                     prompt = (
                         f"El usuario ha escrito la siguiente frase: '{frase_usuario}'.\n"
                         f"Por favor, genera una segunda frase que:\n"
