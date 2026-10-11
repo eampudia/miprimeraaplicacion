@@ -1,3 +1,4 @@
+%%writefile app.py
 import streamlit as st
 from google import genai
 import os
@@ -62,35 +63,11 @@ if st.button("Generar Rima"):
                             return float(coincidencias[0])
                         return float('inf')
 
-                    # 4. Ordenar dinámicamente de menor a mayor versión y seleccionar la versión más pequeña
+                    # 4. Ordenar dinámicamente de menor a mayor versión
                     modelos_ordenados = sorted(modelos_filtrados, key=extraer_numero_version)
-                    modelo_seleccionado = modelos_ordenados[0]
+                    
+                    st.info(f"Modelos 'flash-lite' detectados y ordenados: `{modelos_ordenados}`")
 
-                    st.info(f"Modelos 'flash-lite' detectados: `{modelos_filtrados}`")
-                    st.success(f"Modelo seleccionado de forma dinámica (versión más pequeña): `{modelo_seleccionado}`")
-
-                    # 5. Generar el contenido con el modelo autoseleccionado
+                    # 5. Intentar generar rima iterando sobre los modelos de menor versión a mayor para esquivar los obsoletos (404)
                     prompt = (
-                        f"El usuario ha escrito la siguiente frase: '{frase_usuario}'.\n"
-                        f"Por favor, genera una segunda frase que:\n"
-                        f"1. Tenga una longitud similar (aproximadamente {len(palabras)} palabras).\n"
-                        f"2. Tenga rima asonante con la frase del usuario.\n"
-                        f"3. Tenga sentido y coherencia lógica con la primera.\n"
-                        f"Devuelve únicamente la frase generada, sin explicaciones ni comillas.\n"
-                    ) 
-
-                    response = client.models.generate_content(
-                        model=modelo_seleccionado,
-                        contents=prompt,
-                    )
-
-                    frase_generada = response.text.strip()
-
-                    # Mostrar resultado
-                    st.success("¡Rima generada con éxito!")
-                    st.markdown("### Resultado:")
-                    st.info(f"**Frase original:** {frase_usuario}")
-                    st.success(f"**Frase rimada:** {frase_generada}")
-
-                except Exception as e:
-                    st.error(f"Ocurrió un error: {e}")
+                        f
