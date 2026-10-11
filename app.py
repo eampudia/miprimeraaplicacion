@@ -95,8 +95,8 @@ if st.button("Generar Rima"):
                     if respuesta_generada:
                         # Limpiar comillas extras si las hubiera
                         respuesta_generada = respuesta_generada.replace('"', '').replace("'", "")
-                        st.markdown(f"### **Frase original:** {frase_usuario}")
-                        st.markdown(f"### **Frase rimada:** {respuesta_generada}")
+                        st.markdown(f"###  {frase_usuario}")
+                        st.markdown(f"###  {respuesta_generada}")
                     else:
                         st.error("No se pudo generar la rima con ningún modelo disponible.")
 
