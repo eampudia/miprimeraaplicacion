@@ -1,13 +1,14 @@
 import streamlit as st
 from google import genai
 import os
+import re
 
 # Configuración de la página
 st.set_page_config(page_title="Generador de Rimas", page_icon="✍️")
 st.title("✍️ Generador de Rimas Asonantes")
 st.markdown("Escribe una frase de al menos 4 palabras y la IA seleccionará dinámicamente el modelo más barato y adecuado para generar una segunda frase de longitud similar.")
 
-# Intentar obtener la API Key de varias fuentes seguras
+# Intentar obtener la API Key de varias fuentes seguras en segundo plano
 google_api_key = ""
 
 try:
@@ -19,21 +20,12 @@ except Exception:
 if not google_api_key:
     google_api_key = os.environ.get("GOOGLE_API_KEY", "")
 
-# Permitir introducirla manualmente si no se encuentra en el entorno
-with st.sidebar:
-    st.subheader("Configuración")
-    if not google_api_key:
-        google_api_key = st.text_input("Introduce tu Google API Key:", type="password")
-    else:
-        st.success("¡API Key detectada automáticamente!")
-    st.markdown("[¿Cómo obtener una API Key?](https://aistudio.google.com/)")
-
 # Entrada de la frase por parte del usuario
 frase_usuario = st.text_input("Introduce tu frase inicial (mínimo 4 palabras):", "")
 
 if st.button("Generar Rima"):
     if not google_api_key:
-        st.error("Por favor, configura tu Google API Key en la barra lateral para continuar.")
+        st.error("Por favor, configura tu GOOGLE_API_KEY en los secretos de Google Colab (icono de la llave en el menú lateral de Colab) para continuar.")
     elif not frase_usuario:
         st.warning("Por favor, escribe una frase primero.")
     else:
@@ -41,47 +33,55 @@ if st.button("Generar Rima"):
         if len(palabras) < 4:
             st.error(f"Tu frase tiene solo {len(palabras)} palabras. Debe tener al menos 4 palabras.")
         else:
-            with st.spinner("Conectando con Gemini para buscar el modelo más barato..."):
+            with st.spinner("Descargando y evaluando modelos de Gemini..."):
                 try:
                     client = genai.Client(api_key=google_api_key)
 
-                    # 1. Preguntar a Gemini qué modelos tiene y seleccionar el más barato
+                    # 1. Descargar todos los modelos disponibles
                     modelos_disponibles = []
                     for m in client.models.list():
-                        if 'gemini' in m.name:
+                        if 'gemini' in m.name.lower():
                             modelos_disponibles.append(m.name)
 
-                    # Buscamos el modelo más económico disponible de forma dinámica
-                    # 'gemini-2.5-flash-lite' es el más barato actual. Si no, elegimos un 'flash' básico.
-                    modelo_seleccionado = None
-                    for candidato in ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash']:
-                        # Buscar coincidencias parciales o completas
-                        match = [m for m in modelos_disponibles if candidato in m]
-                        if match:
-                            modelo_seleccionado = match[0]
-                            break
-
-                    # Si no encuentra ninguno de la lista preferente, toma el primero que contenga 'flash' o el primero disponible
-                    if not modelo_seleccionado:
-                        flash_models = [m for m in modelos_disponibles if 'flash' in m]
-                        if flash_models:
-                            modelo_seleccionado = flash_models[0]
-                        elif modelos_disponibles:
-                            modelo_seleccionado = modelos_disponibles[0]
-
-                    if not modelo_seleccionado:
+                    if not modelos_disponibles:
                         raise Exception("No se encontraron modelos de Gemini disponibles en esta cuenta.")
 
-                    st.info(f"Modelo más económico detectado y seleccionado dinámicamente: `{modelo_seleccionado}`")
+                    # 2. Filtrar únicamente los modelos que contienen 'flash' y 'lite'
+                    modelos_filtrados = [
+                        m for m in modelos_disponibles 
+                        if 'flash' in m.lower() and 'lite' in m.lower()
+                    ]
 
-                    # 2. Generar el contenido con el modelo seleccionado
+                    # Si por alguna razón no hubiera ningún 'flash-lite' disponible, usamos 'flash' como alternativa
+                    if not modelos_filtrados:
+                        modelos_filtrados = [m for m in modelos_disponibles if 'flash' in m.lower()]
+
+                    if not modelos_filtrados:
+                        modelos_filtrados = modelos_disponibles
+
+                    # 3. Función para extraer dinámicamente la versión numérica del nombre del modelo
+                    def extraer_numero_version(nombre):
+                        # Busca números decimales (ej. 3.5, 2.5) o enteros (ej. 1, 2)
+                        coincidencias = re.findall(r'\d+\.\d+|\d+', nombre)
+                        if coincidencias:
+                            return float(coincidencias[0])
+                        return float('inf')  # Si no tiene números, lo ubica al final
+
+                    # 4. Ordenar y seleccionar el modelo con la versión más pequeña
+                    modelos_ordenados = sorted(modelos_filtrados, key=extraer_numero_version)
+                    modelo_seleccionado = modelos_ordenados[0]
+
+                    st.info(f"Modelos que cumplen con el filtro 'flash' + 'lite': `{modelos_filtrados}`")
+                    st.success(f"Modelo seleccionado dinámicamente (versión más pequeña): `{modelo_seleccionado}`")
+
+                    # 5. Generar el contenido con el modelo óptimo seleccionado
                     prompt = (
                         f"El usuario ha escrito la siguiente frase: '{frase_usuario}'.\n"
                         f"Por favor, genera una segunda frase que:\n"
                         f"1. Tenga una longitud similar (aproximadamente {len(palabras)} palabras).\n"
                         f"2. Tenga rima asonante con la frase del usuario.\n"
                         f"3. Tenga sentido y coherencia lógica con la primera.\n"
-                        f"Devuelve únicamente la frase generada, sin explicaciones ni comillas."
+                        f"Devuelve únicamente la frase generada, sin explicaciones ni comillas.\n"
                     ) 
 
                     response = client.models.generate_content(
