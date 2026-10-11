@@ -1,3 +1,4 @@
+%%writefile app.py
 import streamlit as st
 from google import genai
 import os
@@ -7,10 +8,21 @@ st.set_page_config(page_title="Generador de Rimas", page_icon="✍️")
 st.title("✍️ Generador de Rimas Asonantes")
 st.markdown("Escribe una frase de al menos 4 palabras y la IA generará una segunda frase de longitud similar, con rima asonante y con sentido.")
 
-# Intentar obtener la API Key desde los secretos de Streamlit o variables de entorno
-google_api_key = os.environ.get("GOOGLE_API_KEY", "")
+# Intentar obtener la API Key de varias fuentes seguras
+google_api_key = ""
 
-# Si no está configurada globalmente, permitir al usuario ingresarla de forma segura
+# 1. Intentar obtener desde Google Colab Userdata (si se ejecuta en el notebook)
+try:
+    from google.colab import userdata
+    google_api_key = userdata.get("GOOGLE_API_KEY")
+except Exception:
+    pass
+
+# 2. Si no está en Colab, intentar obtener de variables de entorno o st.secrets
+if not google_api_key:
+    google_api_key = os.environ.get("GOOGLE_API_KEY", "")
+
+# 3. Si sigue sin configurarse, permitir introducirla manualmente en la barra lateral
 if not google_api_key:
     with st.sidebar:
         st.subheader("Configuración")
@@ -22,7 +34,7 @@ frase_usuario = st.text_input("Introduce tu frase inicial (mínimo 4 palabras):"
 
 if st.button("Generar Rima"):
     if not google_api_key:
-        st.error("Por favor, introduce tu Google API Key en la barra lateral para continuar.")
+        st.error("Por favor, introduce tu Google API Key para continuar.")
     elif not frase_usuario:
         st.warning("Por favor, escribe una frase primero.")
     else:
